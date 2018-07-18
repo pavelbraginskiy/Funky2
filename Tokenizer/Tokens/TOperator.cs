@@ -1,17 +1,18 @@
 using System.Text.RegularExpressions;
-using System.Text;
+
 namespace Funky.Tokens{
 
     // Lower Operator Precedence is "More Sticky".
-    class TOperator : Token{
+    // ReSharper disable once InconsistentNaming
+    public class TOperator : Token{
 
-        private static SOperator[] operators = {
+        private static readonly SOperator[] Operators = {
             new SOperator(@"\+", "add", 7),
             new SOperator(@"-", "sub", 7),
             new SOperator(@"\*", "mult", 6),
             new SOperator(@"//", "intdiv", 6),
             new SOperator(@"/", "div", 6),
-            new SOperator(@"\^", "pow", 5,  Associativity.RIGHT_TO_LEFT),
+            new SOperator(@"\^", "pow", 5,  Associativity.RightToLeft),
             new SOperator(@"\%", "mod", 6),
             new SOperator(@"&&", "and", 15),
             new SOperator(@"\|\|", "or", 16),
@@ -29,55 +30,53 @@ namespace Funky.Tokens{
             new SOperator(@"!=", "ne", 11)
         };
 
-        SOperator op;
+        private SOperator _op;
         public int GetPrecedence(){
-            return op.precedence;
+            return _op.Precedence;
         }
 
         public Associativity GetAssociativity(){
-            return op.associativity;
+            return _op.Associativity;
         }
 
-        new public static TOperator Claim(StringClaimer claimer){
-            for(int i = 0; i < operators.Length; i++){
-                SOperator thisOp = operators[i];
-                Claim c = claimer.Claim(thisOp.regex);
-                if(c.success){
-                    c.Pass();
-                    TOperator newOp = new TOperator();
-                    newOp.op = thisOp;
-                    return newOp;
-                }
+        public new static TOperator Claim(StringClaimer claimer)
+        {
+            foreach (var thisOp in Operators)
+            {
+                Claim c = claimer.Claim(thisOp.Regex);
+                if (!c.Success) continue;
+                c.Pass();
+                TOperator newOp = new TOperator {_op = thisOp};
+                return newOp;
             }
+
             return null;
         }
 
         public Var Parse(Var left, Var right){
-            Var metaMethod = Meta.LR_Get(left, right, op.name, $"left={left.type}", $"right={right.type}");
-            if(metaMethod != null)
-                return metaMethod.Call(new CallData(left, right));
-            return null;
+            Var metaMethod = Meta.LR_Get(left, right, _op.Name, $"left={left.Type}", $"right={right.Type}");
+            return metaMethod?.Call(new CallData(left, right));
         }
     }
 
-    struct SOperator{
-        public Regex regex;
-        public string name;
-        public int precedence;
+    public struct SOperator{
+        public Regex Regex;
+        public string Name;
+        public int Precedence;
 
-        public Associativity associativity;
+        public Associativity Associativity;
         public SOperator(string regex, string name, int precedence){
-            this.regex = new Regex(regex);
-            this.name = name;
-            this.precedence = precedence;
-            this.associativity = Associativity.LEFT_TO_RIGHT;
+            Regex = new Regex(regex);
+            Name = name;
+            Precedence = precedence;
+            Associativity = Associativity.LeftToRight;
         }
 
         public SOperator(string regex, string name, int precedence, Associativity assoc){
-            this.regex = new Regex(regex);
-            this.name = name;
-            this.precedence = precedence;
-            this.associativity = assoc;
+            Regex = new Regex(regex);
+            Name = name;
+            Precedence = precedence;
+            Associativity = assoc;
         }
     }
 }

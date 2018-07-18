@@ -1,6 +1,4 @@
-using Funky.Tokens;
 using System.Text.RegularExpressions;
-using System.Collections.Generic;
 
 namespace Funky.Tokens.Flow{
     class TFor : TExpression{
@@ -15,7 +13,7 @@ namespace Funky.Tokens.Flow{
         
         new public static TFor Claim(StringClaimer claimer){
             Claim c = claimer.Claim(FOR);
-            if(!c.success)
+            if(!c.Success)
                 return null;
 
             TExpression[] exprs = new TExpression[4];
@@ -28,7 +26,7 @@ namespace Funky.Tokens.Flow{
             }
             claimed--;
             c = claimer.Claim(RIGHT_BRACKET);
-            if((exprs[3] = TExpression.Claim(claimer))==null && !c.success){
+            if((exprs[3] = TExpression.Claim(claimer))==null && !c.Success){
                 if(claimed >= 0 && exprs[claimed] != null){
                     exprs[3] = exprs[claimed];
                     exprs[claimed] = null;
@@ -46,13 +44,13 @@ namespace Funky.Tokens.Flow{
         override public Var Parse(Scope scope){
             initial?.Parse(scope);
             Var ret = null;
-            while(condition == null || (condition.Parse(scope)?.asBool() ?? false)){
+            while(condition == null || (condition.Parse(scope)?.AsBool() ?? false)){
                 ret = body?.Parse(scope);
-                if(scope.escape.Count > 0){
-                    Escaper esc = scope.escape.Peek();
-                    if(esc.method == Escape.BREAK)
-                        scope.escape.Pop();
-                    return esc.value;
+                if(scope.Escape.Count > 0){
+                    Escaper esc = scope.Escape.Peek();
+                    if(esc.Method == Escape.Break)
+                        scope.Escape.Pop();
+                    return esc.Value;
                 }
                 after?.Parse(scope);
             }

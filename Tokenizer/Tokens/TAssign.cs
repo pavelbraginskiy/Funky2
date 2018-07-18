@@ -1,16 +1,16 @@
 using System.Text.RegularExpressions;
-using System.Text;
 
 namespace Funky.Tokens{
-    class TAssignment : TExpression {
-        TExpression value;
-        TVariable var;
-        TOperator op;
+    // ReSharper disable once InconsistentNaming
+    public class TAssignment : TExpression {
+        private TExpression _value;
+        private TVariable _var;
+        private TOperator _op;
 
-        static Regex SET = new Regex(@"=");
+        private static readonly Regex Set = new Regex(@"=", RegexOptions.Compiled);
 
-        new public static TAssignment Claim(StringClaimer claimer){
-            Claim failTo = claimer.failPoint();
+        public new static TAssignment Claim(StringClaimer claimer){
+            Claim failTo = claimer.FailPoint();
 
             TVariable toAssign = TVariable.Claim(claimer);
             if(toAssign == null){
@@ -20,8 +20,8 @@ namespace Funky.Tokens{
 
             TOperator newOp = TOperator.Claim(claimer);
 
-            Claim c = claimer.Claim(SET);
-            if(!c.success){
+            Claim c = claimer.Claim(Set);
+            if(!c.Success){
                 failTo.Fail();
                 return null;
             }
@@ -30,22 +30,24 @@ namespace Funky.Tokens{
                 failTo.Fail();
                 return null;
             }
-            TAssignment newAssign = new TAssignment();
-            newAssign.var = toAssign;
-            newAssign.op = newOp;
-            newAssign.value = assignValue;
+
+            TAssignment newAssign = new TAssignment
+            {
+                _var = toAssign,
+                _op = newOp,
+                _value = assignValue
+            };
 
             return newAssign;
         }
 
-        override public Var Parse(Scope scope){
-            if(op != null){
-                Var left = var.Get(scope);
-                Var val = value.Parse(scope);
-                val = op.Parse(left, val);
-                return var.Set(scope, val);
-            }else
-                return var.Set(scope, value.Parse(scope));
+        public override Var Parse(Scope scope)
+        {
+            if (_op == null) return _var.Set(scope, _value.Parse(scope));
+            Var left = _var.Get(scope);
+            Var val = _value.Parse(scope);
+            val = _op.Parse(left, val);
+            return _var.Set(scope, val);
         }
     }
 }

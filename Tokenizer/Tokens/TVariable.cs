@@ -1,14 +1,14 @@
 using System.Text.RegularExpressions;
-using System.Text;
+
 namespace Funky.Tokens{
-    abstract class TVariable : TExpression{
-        new public static TVariable Claim(StringClaimer claimer){
+    // ReSharper disable once InconsistentNaming
+    public abstract class TVariable : TExpression{
+        public new static TVariable Claim(StringClaimer claimer){
             TVariable result;
-            if((result = TIdentifier.Claim(claimer))!=null)return result;
-            return null;
+            return (result = TIdentifier.Claim(claimer))!=null ? result : null;
         }
 
-        override public Var Parse(Scope scope){
+        public override Var Parse(Scope scope){
             return Get(scope);
         }
 
@@ -16,34 +16,35 @@ namespace Funky.Tokens{
         public abstract Var Set(Scope scope, Var value);
     }
 
-    class TIdentifier : TVariable{
-        public string name;
-        bool isLocal = false;
-        static Regex LOCAL = new Regex(@"local|var|let");
-        static Regex IDENTIFIER = new Regex(@"^[a-zA-Z_]\w*");
+    // ReSharper disable once InconsistentNaming
+    public class TIdentifier : TVariable{
+        public string Name;
+        private bool _isLocal;
+        private static readonly Regex Local = new Regex(@"local|var|let", RegexOptions.Compiled);
+        private static readonly Regex Identifier = new Regex(@"^[a-zA-Z_]\w*", RegexOptions.Compiled);
 
-        new public static TIdentifier Claim(StringClaimer claimer){   
+        public new static TIdentifier Claim(StringClaimer claimer){   
             TIdentifier ident = new TIdentifier();
-            Claim c = claimer.Claim(LOCAL);
-            if(c.success){
+            Claim c = claimer.Claim(Local);
+            if(c.Success){
                 c.Pass();
-                ident.isLocal = true;
+                ident._isLocal = true;
             }
 
-            c = claimer.Claim(IDENTIFIER);
-            if(!c.success){
+            c = claimer.Claim(Identifier);
+            if(!c.Success){
                 return null;
             }
-            ident.name = c.GetText();
+            ident.Name = c.GetText();
             return ident;
         }
 
         public override Var Get(Scope scope){
-            return isLocal ? (scope.variables.string_vars.ContainsKey(name) ? scope.variables.string_vars[name] : null) : scope.variables.Get(name);
+            return _isLocal ? (scope.Variables.StringVars.ContainsKey(Name) ? scope.Variables.StringVars[Name] : null) : scope.Variables.Get(Name);
         }
 
         public override Var Set(Scope scope, Var value){
-            return isLocal ? scope.variables.string_vars[name] = value : scope.variables.Set(name, value);
+            return _isLocal ? scope.Variables.StringVars[Name] = value : scope.Variables.Set(Name, value);
         }
     }
 }

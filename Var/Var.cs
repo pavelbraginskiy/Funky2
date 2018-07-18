@@ -1,106 +1,93 @@
-using System.Collections.Generic;
 namespace Funky{
-    class Var{
-        public string type;
-        public VarList meta;
+    public class Var{
+        public string Type;
+        public VarList Meta;
 
         // Sometimes you want a string representation of the type, but you want to do it Programatically.
         // AKA: Making real coders cry.
-        public Var(){type = this.GetType().Name.Substring(3).ToLower();}
+        public Var(){Type = GetType().Name.Substring(3).ToLower();}
 
         public virtual Var Call(CallData callData){
             return this;
         }
 
         public virtual Var Get(Var key){
-            Var callFunc = Meta.Get(this, "get", $"key({key.type})");
-            if(callFunc != null)
-                return callFunc.Call(new CallData(this, (VarString)key));
-            return null;
+            Var callFunc = Funky.Meta.Get(this, "get", $"key({key.Type})");
+            return callFunc?.Call(new CallData(this, (VarString)key));
         }
 
         public virtual Var Set(Var key, Var val){
-            Var callFunc = Meta.Get(this, "set", $"key({key.type})", $"value({val.type})");
-            if(callFunc != null)
-                return callFunc.Call(new CallData(this, (VarString)key, val));
-            return val;
+            Var callFunc = Funky.Meta.Get(this, "set", $"key({key.Type})", $"value({val.Type})");
+            return callFunc != null ? callFunc.Call(new CallData(this, (VarString)key, val)) : val;
         }
 
         public Var this[string key]{
-            get{return Get((VarString)key);}
-            set{Set((VarString)key, value);}
+            get => Get(key);
+            set => Set(key, value);
         }
 
         public Var this[double key]{
-            get{return Get((VarNumber)key);}
-            set{Set((VarNumber)key, value);}
+            get => Get(key);
+            set => Set(key, value);
         }
 
         public Var this[Var key]{
-            get{return Get(key);}
-            set{Set(key, value);}
+            get => Get(key);
+            set => Set(key, value);
         }
 
-        public virtual VarString asString(){
-            Var callFunc = Meta.Get(this, "tostring");
-            if(callFunc != null){
-                Var outp = callFunc.Call(new CallData(this));
-                if(!(outp is VarString)){
-                    return outp.asString();
-                }
-                return outp as VarString;
+        public virtual VarString AsString(){
+            Var callFunc = Funky.Meta.Get(this, "tostring");
+            if (callFunc == null) return new VarString("");
+            Var outp = callFunc.Call(new CallData(this));
+            if(outp is VarString s)
+            {
+                return s;
             }
-            return new VarString("");
+            return outp.AsString();
         }
-        public virtual VarNumber asNumber(){
-            Var callFunc = Meta.Get(this, "tonumber");
-            if(callFunc != null){
-                Var outp = callFunc.Call(new CallData(this));
-                if(!(outp is VarNumber)){
-                    return outp.asNumber();
-                }
-                return outp as VarNumber;
+        public virtual VarNumber AsNumber(){
+            Var callFunc = Funky.Meta.Get(this, "tonumber");
+            if (callFunc == null) return new VarNumber(0);
+            Var outp = callFunc.Call(new CallData(this));
+            if(outp is VarNumber n){
+                return n;
             }
-            return new VarNumber(0);
+            return outp.AsNumber();
         }
-        public virtual VarList asList(){
-            Var callFunc = Meta.Get(this, "tolist");
+        public virtual VarList AsList(){
+            Var callFunc = Funky.Meta.Get(this, "tolist");
             if(callFunc != null){
                 Var outp = callFunc.Call(new CallData(this));
                 if(!(outp is VarList)){
-                    return outp.asList();
+                    return outp.AsList();
                 }
                 return outp as VarList;
             }
-            VarList n = new VarList();
-            n.double_vars[0] = this;
+
+            VarList n = new VarList {DoubleVars = {[0] = this}};
             return n;
         }
 
-        public virtual VarFunction asFunction(){
-            Var callFunc = Meta.Get(this, "tofunction");
-            if(callFunc != null){
-                Var outp = callFunc.Call(new CallData(this));
-                if(!(outp is VarFunction)){
-                    return outp.asFunction();
-                }
-                return outp as VarFunction;
+        public virtual VarFunction AsFunction(){
+            Var callFunc = Funky.Meta.Get(this, "tofunction");
+            if (callFunc == null)
+                return new VarFunction(Call);
+            Var outp = callFunc.Call(new CallData(this));
+            if(!(outp is VarFunction)){
+                return outp.AsFunction();
             }
-            return new VarFunction(dat => {
-                return this.Call(dat);
-            });
+            return outp as VarFunction;
         }
 
-        public virtual bool asBool(){
-            Var callFunc = Meta.Get(this, "tobool");
-            if(callFunc != null){
-                Var outp = callFunc.Call(new CallData(this));
-                if(!(outp is VarNumber n)){
-                    return outp.asBool();
-                }
-                return n.value != 0;
+        public virtual bool AsBool(){
+            Var callFunc = Funky.Meta.Get(this, "tobool");
+            if (callFunc == null) return false;
+            Var outp = callFunc.Call(new CallData(this));
+            if(!(outp is VarNumber n)){
+                return outp.AsBool();
             }
-            return false;
+            return n.Value != 0;
         }
 
         public static implicit operator Var(string v){
@@ -112,35 +99,37 @@ namespace Funky{
         }
     }
 
-    class VarNumber : Var{
-        public double value;
+    public class VarNumber : Var{
+        public double Value;
 
         public static implicit operator double(VarNumber var){
-            return var.value;
+            return var.Value;
         }
-        public VarNumber(double v) : base(){
-            value = v;
+        public VarNumber(double v)
+        {
+            Value = v;
         }
 
-        public override VarNumber asNumber(){
+        public override VarNumber AsNumber(){
             return this;
         }
-        public override bool asBool(){
+        public override bool AsBool(){
             return this!=0;
         }
     }
 
-    class VarString : Var {
-        public string data;
+    public class VarString : Var {
+        public string Data;
         public static implicit operator string(VarString var){
-            return var.data;
+            return var.Data;
         }
 
-        public VarString(string d) : base(){
-            data = d;
+        public VarString(string d)
+        {
+            Data = d;
         }
 
-        public override VarString asString(){
+        public override VarString AsString(){
             return this;
         }
 

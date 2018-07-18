@@ -1,19 +1,20 @@
 using System.Text.RegularExpressions;
 
 namespace Funky.Tokens.Flow{
-    class TIf : TExpression{
+    // ReSharper disable once InconsistentNaming
+    public class TIf : TExpression{
 
-        private static Regex IF = new Regex(@"if");
-        private static Regex ELSE = new Regex(@"else");
+        private static readonly Regex If = new Regex(@"if", RegexOptions.Compiled);
+        private static readonly Regex Else = new Regex(@"else", RegexOptions.Compiled);
 
-        TExpression condition;
-        TExpression action;
-        TExpression otherwise;
+        private TExpression _condition;
+        private TExpression _action;
+        private TExpression _otherwise;
 
-        new public static TIf Claim(StringClaimer claimer){
-            Claim failpoint = claimer.failPoint();
-            Claim c = claimer.Claim(IF);
-            if(!c.success){
+        public new static TIf Claim(StringClaimer claimer){
+            Claim failpoint = claimer.FailPoint();
+            Claim c = claimer.Claim(If);
+            if(!c.Success){
                 failpoint.Fail();
                 return null;
             }
@@ -23,33 +24,30 @@ namespace Funky.Tokens.Flow{
                 return null;
             }
             TExpression action = TExpression.Claim(claimer);
-            if(condition == null){
-                failpoint.Fail();
-                return null;
-            }
-            TIf ifblock = new TIf();
+            TIf ifblock = new TIf
+            {
+                _condition = condition,
+                _action = action
+            };
 
-            ifblock.condition = condition;
-            ifblock.action = action;
 
-            c = claimer.Claim(ELSE);
-            if(c.success){
-                TExpression otherwise = TExpression.Claim(claimer);
-                if(otherwise == null){
-                    c.Fail();
-                }else{
-                    ifblock.otherwise = otherwise;
-                    c.Pass();
-                }
+            c = claimer.Claim(Else);
+            if (!c.Success) return ifblock;
+            TExpression otherwise = TExpression.Claim(claimer);
+            if(otherwise == null){
+                c.Fail();
+            }else{
+                ifblock._otherwise = otherwise;
+                c.Pass();
             }
-            
+
 
             return ifblock;
         }
 
-        override public Var Parse(Scope scope){
-            Var should = condition.Parse(scope);
-            return should?.asBool()??false?action.Parse(scope):otherwise?.Parse(scope);
+        public override Var Parse(Scope scope){
+            Var should = _condition.Parse(scope);
+            return should?.AsBool()??false?_action.Parse(scope):_otherwise?.Parse(scope);
         }
     }
 }

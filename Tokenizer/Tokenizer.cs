@@ -1,61 +1,58 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using System.Text;
-using System;
 using Funky.Tokens;
 
 namespace Funky{
-    class Tokenizer{
+    public class Tokenizer{
         
     }
 
-    enum Escape{
-        RETURN, BREAK
+    public enum Escape{
+        Return, Break
     }
 
-    struct Scope {
-        public VarList variables;
-        public Stack<Escaper> escape;
+    public struct Scope {
+        public VarList Variables;
+        public Stack<Escaper> Escape;
 
         public Scope(VarList v){
-            variables = v;
-            escape = new Stack<Escaper>();
+            Variables = v;
+            Escape = new Stack<Escaper>();
         }
     }
 
-    struct Escaper{
-        public Escape method;
-        public Var value;
+    public struct Escaper{
+        public Escape Method;
+        public Var Value;
 
         public Escaper(Escape method, Var value){
-            this.method = method;
-            this.value = value;
+            Method = method;
+            Value = value;
         }
     }
 
-    class TProgram : Token{
-        List<TExpression> expressions = new List<TExpression>();
-        static Regex SEMI_COLON = new Regex(@";");
-        new public static TProgram Claim(StringClaimer claimer){
+    // ReSharper disable once InconsistentNaming
+    public class TProgram : Token{
+        private readonly List<TExpression> _expressions = new List<TExpression>();
+        private static readonly Regex SemiColon = new Regex(@";", RegexOptions.Compiled);
+        public new static TProgram Claim(StringClaimer claimer){
             TProgram prog = new TProgram();
 
             TExpression e;
             while((e = TExpression.Claim(claimer))!=null){
-                claimer.Claim(SEMI_COLON);
-                prog.expressions.Add(e);
+                claimer.Claim(SemiColon);
+                prog._expressions.Add(e);
             }
             return prog;
         }
 
         public void Parse(){
-            VarList scopeList = new VarList();
-            scopeList.parent = Globals.get();
+            VarList scopeList = new VarList {Parent = Globals.Get()};
             Scope scope = new Scope(scopeList);
-            Var[] results = new Var[expressions.Count];
-            for(int i=0; i < expressions.Count; i++){
-                results[i] = expressions[i].Parse(scope);
+            Var[] results = new Var[_expressions.Count];
+            for(int i=0; i < _expressions.Count; i++){
+                results[i] = _expressions[i].Parse(scope);
             }
-            return;
         }
     }
 }

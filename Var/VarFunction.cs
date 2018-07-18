@@ -1,35 +1,37 @@
+using System;
 using System.Collections.Generic;
-namespace Funky{
 
-    struct CallData{
-        public Dictionary<double, Var> num_args;
-        public Dictionary<string, Var> str_args;
-        public Dictionary<Var, Var>    var_args;
+namespace Funky{
+    public struct CallData{
+        public Dictionary<double, Var> NumArgs;
+        public Dictionary<string, Var> StrArgs;
+        public Dictionary<Var, Var>    VarArgs;
 
         public CallData(params Var[] args){
-            num_args = new Dictionary<double, Var>();
-            str_args = new Dictionary<string, Var>();
-            var_args = new Dictionary<Var,    Var>();
+            NumArgs = new Dictionary<double, Var>();
+            StrArgs = new Dictionary<string, Var>();
+            VarArgs = new Dictionary<Var,    Var>();
             for(int i=0; i < args.Length; i++){
-                num_args[i] = args[i];
+                NumArgs[i] = args[i];
             }
         }
     }
 
-    class VarFunction : Var{
-        public System.Func<CallData, Var> action;
+    public class VarFunction : Var{
+        public Func<CallData, Var> Action;
 
         public string FunctionText = "[internal function]";
 
-        public VarFunction(System.Func<CallData, Var> todo) : base(){
-            this.action = todo;
+        public VarFunction(Func<CallData, Var> todo)
+        {
+            Action = todo;
         }
 
         public override Var Call(CallData callData){
-            return action(callData);
+            return Action(callData);
         }
 
-        public override VarFunction asFunction(){
+        public override VarFunction AsFunction(){
             return this;
         }
     }

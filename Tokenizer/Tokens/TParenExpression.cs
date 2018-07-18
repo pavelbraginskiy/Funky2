@@ -1,29 +1,29 @@
 using System.Text.RegularExpressions;
-using System.Text;
+
 namespace Funky.Tokens{
-    class TParenExpression : TExpression{
-        private static Regex LEFT_BRACKET = new Regex("^\\(");
-        private static Regex RIGHT_BRACKET = new Regex("^\\)");
+    // ReSharper disable once InconsistentNaming
+    public class TParenExpression : TExpression{
+        private static readonly Regex LeftBracket = new Regex(@"^\(", RegexOptions.Compiled);
+        private static readonly Regex RightBracket = new Regex(@"^\)", RegexOptions.Compiled);
 
-        TExpression realExpression;
+        private TExpression _realExpression;
 
-        new public static TParenExpression Claim(StringClaimer claimer){
-            Claim lb = claimer.Claim(LEFT_BRACKET);
-            if(!lb.success) return null;
-            TParenExpression ptoken = new TParenExpression();
-            ptoken.realExpression = TExpression.Claim(claimer);
-            if(ptoken.realExpression == null){
+        public new static TParenExpression Claim(StringClaimer claimer){
+            Claim lb = claimer.Claim(LeftBracket);
+            if(!lb.Success) return null;
+            TParenExpression ptoken = new TParenExpression {_realExpression = TExpression.Claim(claimer)};
+            if(ptoken._realExpression == null){
                 lb.Fail();
                 return null;
             }
             lb.Pass();
-            Claim rb = claimer.Claim(RIGHT_BRACKET);
-            if(rb.success) rb.Pass(); // right bracket is optional. So just pass it if we get it.
+            Claim rb = claimer.Claim(RightBracket);
+            if(rb.Success) rb.Pass(); // right bracket is optional. So just pass it if we get it.
             return ptoken;
         }
 
-        override public Var Parse(Scope scope){
-            return realExpression.Parse(scope);
+        public override Var Parse(Scope scope){
+            return _realExpression.Parse(scope);
         }
     }
 }

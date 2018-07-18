@@ -1,47 +1,47 @@
-using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.Text;
+using System.Text.RegularExpressions;
+
 namespace Funky.Tokens{
-    class TCall : TLeftExpression{
-        TExpression caller;
-        List<TArgument> arguments = new List<TArgument>();
+    // ReSharper disable once InconsistentNaming
+    public class TCall : TLeftExpression{
+        private TExpression _caller;
+        private readonly List<TArgument> _arguments = new List<TArgument>();
 
-        private static Regex LEFT_BRACKET = new Regex("^\\(");
-        private static Regex RIGHT_BRACKET = new Regex("^\\)");
-        private static Regex COMMA = new Regex("^,");
+        private static readonly Regex LeftBracket = new Regex("^\\(", RegexOptions.Compiled);
+        private static readonly Regex RightBracket = new Regex("^\\)", RegexOptions.Compiled);
+        private static readonly Regex Comma = new Regex("^,", RegexOptions.Compiled);
 
-        public static VarList hackMeta;
+        public static VarList HackMeta;
         
 
-        override public TExpression GetLeft(){
-            return caller;
+        public override TExpression GetLeft(){
+            return _caller;
         }
 
-        override public void SetLeft(TExpression newLeft){
-            caller = newLeft;
+        public override void SetLeft(TExpression newLeft){
+            _caller = newLeft;
         }
 
-        override public int GetPrecedence(){
+        public override int GetPrecedence(){
             return -1;
         }
 
-        override public Associativity GetAssociativity(){
-            return Associativity.NA;
+        public override Associativity GetAssociativity(){
+            return Associativity.Na;
         }
 
-        new public static TCall leftClaim(StringClaimer claimer, TExpression left){
-            Claim lb = claimer.Claim(LEFT_BRACKET);
-            if(!lb.success){ // Left Bracket is a requirement.
+        public new static TCall LeftClaim(StringClaimer claimer, TExpression left){
+            Claim lb = claimer.Claim(LeftBracket);
+            if(!lb.Success){ // Left Bracket is a requirement.
                 return null;
             }
             lb.Pass(); // At this point, we cannot fail.
 
-            TCall newCall = new TCall();
-            newCall.caller = left;
+            TCall newCall = new TCall {_caller = left};
 
             while(true){
-                Claim rb = claimer.Claim(RIGHT_BRACKET);
-                if(rb.success){
+                Claim rb = claimer.Claim(RightBracket);
+                if(rb.Success){
                     rb.Pass();
                     break;
                 }
@@ -49,72 +49,77 @@ namespace Funky.Tokens{
                 if(newArg == null){
                     break;
                 }
-                newCall.arguments.Add(newArg);
-                claimer.Claim(COMMA);
+                newCall._arguments.Add(newArg);
+                claimer.Claim(Comma);
             }
 
             return newCall;
         }
 
-        override public Var Parse(Scope scope){
+        public override Var Parse(Scope scope){
             Scope hackedScope = new Scope();
             VarList argList = new VarList();
-            hackedScope.variables = argList;
-            argList.string_vars["_parent"] = scope.variables;
-            argList.meta = getHackMeta();
+            hackedScope.Variables = argList;
+            argList.StringVars["_parent"] = scope.Variables;
+            argList.Meta = GetHackMeta();
             int index = 0;
-            for(int i=0; i < arguments.Count; i++){
-                index = arguments[i].AppendArguments(argList, index, hackedScope);
+            foreach (var t in _arguments)
+            {
+                index = t.AppendArguments(argList, index, hackedScope);
             }
-            Var callVar = caller.Parse(scope);
+            Var callVar = _caller.Parse(scope);
             if(callVar == null){
                 return null;
             }
-            CallData callData = new CallData();
-            callData.num_args = argList.double_vars;
-            callData.str_args = argList.string_vars;
-            callData.var_args = argList.other_vars;
+
+            CallData callData = new CallData
+            {
+                NumArgs = argList.DoubleVars,
+                StrArgs = argList.StringVars,
+                VarArgs = argList.OtherVars
+            };
             return callVar.Call(callData);
         }
 
-        private static VarList getHackMeta(){
-            if(hackMeta == null){
-                hackMeta = new VarList();
-                hackMeta["get"] = new VarFunction(delegate(CallData data){
-                    Var father = data.num_args[0].Get("_parent");
-                    if(father == null){
-                        return null;
-                    }
-                    return father.Get(data.num_args[1]);
-                });
-            }
-            return hackMeta;
+        private static VarList GetHackMeta(){
+            if (HackMeta != null) return HackMeta;
+            HackMeta = new VarList
+            {
+                ["get"] = new VarFunction(delegate(CallData data)
+                {
+                    Var father = data.NumArgs[0].Get("_parent");
+
+                    return father?.Get(data.NumArgs[1]);
+                })
+            };
+            return HackMeta;
         }
 
     }
 
-    abstract class TArgument : TExpression{
+    // ReSharper disable once InconsistentNaming
+    public abstract class TArgument : TExpression{
         public abstract int AppendArguments(VarList argumentList, int index, Scope scope);
-        override public Var Parse(Scope scope){return null;} // Never parse. Never.
+        public override Var Parse(Scope scope) => null;
 
-        new public static TArgument Claim(StringClaimer claimer){
+        public new static TArgument Claim(StringClaimer claimer){
             return TArgExpression.Claim(claimer);
         } 
     }
 
-    class TArgExpression : TArgument{
-        TExpression heldExp;
-        override public int AppendArguments(VarList argumentList, int index, Scope scope){
-            argumentList.double_vars[index] = heldExp.Parse(scope);
+    // ReSharper disable once InconsistentNaming
+    public class TArgExpression : TArgument{
+        private TExpression _heldExp;
+        public override int AppendArguments(VarList argumentList, int index, Scope scope){
+            argumentList.DoubleVars[index] = _heldExp.Parse(scope);
             return index+1;
         }
 
-        new public static TArgExpression Claim(StringClaimer claimer){
+        public new static TArgExpression Claim(StringClaimer claimer){
             TExpression heldExpr = TExpression.Claim(claimer);
             if(heldExpr == null)
                 return null;
-            TArgExpression newArgExp = new TArgExpression();
-            newArgExp.heldExp = heldExpr;
+            TArgExpression newArgExp = new TArgExpression {_heldExp = heldExpr};
             return newArgExp;
         }
     }

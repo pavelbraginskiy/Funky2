@@ -1,66 +1,70 @@
-using System.Text.RegularExpressions;
-using System.Globalization;
-using System.Text;
 using System;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace Funky.Tokens{
-    abstract class TLiteral : TExpression{
-        new public static TLiteral Claim(StringClaimer claimer){
-            return TLiteralNumber.Claim(claimer)    as TLiteral ??
+    // ReSharper disable once InconsistentNaming
+    public abstract class TLiteral : TExpression{
+        public new static TLiteral Claim(StringClaimer claimer){
+            return TLiteralNumber.Claim(claimer) ??
             TLiteralStringSimple.Claim(claimer)     as TLiteral;
         }
     }
 
-    class TLiteralStringSimple : TLiteral{
-        VarString value;
-        static Regex STRING = new Regex(@"^(?<qoute>'|"")(?<text>(\\\\|\\[^\\]|[^\\])*?)\k<qoute>");
+    // ReSharper disable once InconsistentNaming
+    public class TLiteralStringSimple : TLiteral{
+        private VarString _value;
+        private static readonly Regex String = new Regex(@"^(?<qoute>'|"")(?<text>(\\\\|\\[^\\]|[^\\])*?)\k<qoute>", RegexOptions.Compiled);
 
-        new public static TLiteralStringSimple Claim(StringClaimer claimer){
-            Claim c = claimer.Claim(STRING);
-            if(!c.success){
+        public new static TLiteralStringSimple Claim(StringClaimer claimer){
+            Claim c = claimer.Claim(String);
+            if(!c.Success){
                 return null;
             }
             c.Pass();
-            TLiteralStringSimple str = new TLiteralStringSimple();
-            str.value = new VarString(Regex.Unescape(c.GetMatch().Groups["text"].Value));
+            TLiteralStringSimple str = new TLiteralStringSimple
+            {
+                _value = new VarString(Regex.Unescape(c.GetMatch().Groups["text"].Value))
+            };
             return str;
         }
 
-        override public Var Parse(Scope scope){
-            return value;
+        public override Var Parse(Scope scope){
+            return _value;
         }
     }
 
-    class TLiteralNumber : TLiteral{
-        VarNumber value;
-        static Regex NUMBER = new Regex(@"^(?<negative>-?)(?:(?<integer>0(?:x(?<hex_val>[0-9A-Fa-f]+)|b(?<bin_val>[01]+)))|(?:(?<float>(?<int_comp>\d*)\.(?<float_comp>\d+))|(?<int>\d+))(?:e(?<expon>-?\d+))?)");
-        new public static TLiteralNumber Claim(StringClaimer claimer){
+    // ReSharper disable once InconsistentNaming
+    public class TLiteralNumber : TLiteral{
+        private VarNumber _value;
+        private static readonly Regex Number = new Regex(
+            // WTF is this regex?
+            @"^(?<negative>-?)((?<integer>0(x(?<hex_val>[0-9A-Fa-f]+)|b(?<bin_val>[01]+)))|((?<float>(?<int_comp>\d*)\.(?<float_comp>\d+))|(?<int>\d+))(e(?<expon>-?\d+))?)",
+            RegexOptions.Compiled | RegexOptions.ExplicitCapture
+            //ExplicitCapture lets you use `()` isntead of `(?:)`
+            //I'd use RegexOptions.IgnorePatternWhiteSpace to break the regex up into a few lines for readability
+            //But honestly it's kinda beyond hope
+        );
+        public new static TLiteralNumber Claim(StringClaimer claimer){
             TLiteralNumber numb = new TLiteralNumber();
 
-            Claim claim = claimer.Claim(NUMBER);
+            Claim claim = claimer.Claim(Number);
 
-            if(!claim.success){
+            if(!claim.Success){
                 return null;
             }
             claim.Pass();
 
-            double v = 0.0d;
+            double v;
             Match m = claim.GetMatch();
 
 
-            if(m.Groups["integer"].Length > 0){ // x or b integer format.
-                if(m.Groups["hex_val"].Length > 0){
-                    v = (double)int.Parse(m.Groups["hex_val"].Value, NumberStyles.HexNumber);
-                }else{
-                    v = (double)Convert.ToInt32(m.Groups["bin_val"].Value, 2);
-                }
+            if(m.Groups["integer"].Length > 0)
+            {
+                // x or b integer format.
+                v = m.Groups["hex_val"].Length > 0 ? int.Parse(m.Groups["hex_val"].Value, NumberStyles.HexNumber) : Convert.ToInt32(m.Groups["bin_val"].Value, 2);
             }else{
-                string num;
-                if(m.Groups["int"].Length > 0){
-                    num = m.Groups["int"].Value;
-                }else{
-                    num = m.Groups["float"].Value;
-                }
+                var num = m.Groups["int"].Length > 0 ? m.Groups["int"].Value : m.Groups["float"].Value;
                 v = Convert.ToDouble(num);
                 if(m.Groups["expon"].Length > 0){
                     for(int i = Convert.ToInt32(m.Groups["expon"].Value); i>0; i--)
@@ -70,12 +74,12 @@ namespace Funky.Tokens{
 
             if(m.Groups["negative"].Length > 0) // Has a -
                 v *= -1;
-            numb.value = new VarNumber(v);
+            numb._value = new VarNumber(v);
             return numb;
         }
 
-        override public Var Parse(Scope scope){
-            return value;
+        public override Var Parse(Scope scope){
+            return _value;
         }
     }
 }

@@ -1,30 +1,32 @@
 using Funky.Tokens.Flow;
+
 namespace Funky.Tokens{
-    abstract class TExpression : Token{
-        new public static TExpression Claim(StringClaimer claimer){
+    // ReSharper disable once InconsistentNaming
+    public abstract class TExpression : Token{
+        public new static TExpression Claim(StringClaimer claimer){
             TExpression preClaimed = pre_claim(claimer);
             if(preClaimed == null)
                 return null;
-            TExpression next_claim;
-            while((next_claim = post_claim(claimer, preClaimed))!=null)
-                preClaimed = next_claim;
+            TExpression nextClaim;
+            while((nextClaim = post_claim(claimer, preClaimed))!=null)
+                preClaimed = nextClaim;
             return preClaimed;
         }
 
         private static TExpression pre_claim(StringClaimer claimer){
-            return TAssignment.Claim(claimer)   as TExpression ??
-            TIf.Claim(claimer)                  as TExpression ??
-            TFor.Claim(claimer)                 as TExpression ??
-            TWhile.Claim(claimer)               as TExpression ??
-            TVariable.Claim(claimer)            as TExpression ??
-            TLiteral.Claim(claimer)             as TExpression ??
-            TParenExpression.Claim(claimer)     as TExpression ??
+            return TAssignment.Claim(claimer) ??
+            TIf.Claim(claimer) ??
+            TFor.Claim(claimer) ??
+            TWhile.Claim(claimer) ??
+            TVariable.Claim(claimer) ??
+            TLiteral.Claim(claimer) ??
+            TParenExpression.Claim(claimer) ??
             TBlock.Claim(claimer)               as TExpression;
         }
 
-        private static TExpression post_claim(StringClaimer claimer, TExpression last_claim){
-            return  TCall.leftClaim(claimer, last_claim)    as TExpression ??
-            TArithmetic.leftClaim(claimer, last_claim)      as TExpression;
+        private static TExpression post_claim(StringClaimer claimer, TExpression lastClaim){
+            return  TCall.LeftClaim(claimer, lastClaim) ??
+            TArithmetic.LeftClaim(claimer, lastClaim);
         }
 
         public abstract Var Parse(Scope scope); // Although Expression requires a Parse function, it fails to implement it, because it shouldn't be possible to have a raw "TExpression" token.

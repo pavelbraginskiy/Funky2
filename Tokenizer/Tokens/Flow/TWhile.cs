@@ -1,17 +1,18 @@
-using Funky.Tokens;
 using System.Text.RegularExpressions;
+
 namespace Funky.Tokens.Flow{
-    class TWhile : TExpression{
+    // ReSharper disable once InconsistentNaming
+    public class TWhile : TExpression{
 
-        private static Regex WHILE = new Regex(@"while");
+        private static readonly Regex While = new Regex(@"while", RegexOptions.Compiled);
 
-        TExpression condition;
-        TExpression action;
+        private TExpression _condition;
+        private TExpression _action;
 
-        new public static TWhile Claim(StringClaimer claimer){
-            Claim failpoint = claimer.failPoint();
-            Claim c = claimer.Claim(WHILE);
-            if(!c.success){
+        public new static TWhile Claim(StringClaimer claimer){
+            Claim failpoint = claimer.FailPoint();
+            Claim c = claimer.Claim(While);
+            if(!c.Success){
                 failpoint.Fail();
                 return null;
             }
@@ -21,27 +22,24 @@ namespace Funky.Tokens.Flow{
                 return null;
             }
             TExpression action = TExpression.Claim(claimer);
-            if(condition == null){
-                failpoint.Fail();
-                return null;
-            }
-            TWhile whileBlock = new TWhile();
+            TWhile whileBlock = new TWhile
+            {
+                _condition = condition,
+                _action = action
+            };
 
-            whileBlock.condition = condition;
-            whileBlock.action = action;
             return whileBlock;
         }
 
-        override public Var Parse(Scope scope){
+        public override Var Parse(Scope scope){
             Var ret = null;
-            while(condition.Parse(scope)?.asBool() ?? false){
-                ret = action.Parse(scope);
-                if(scope.escape.Count > 0){
-                    Escaper esc = scope.escape.Peek();
-                    if(esc.method == Escape.BREAK)
-                        scope.escape.Pop();
-                    return esc.value;
-                }
+            while(_condition.Parse(scope)?.AsBool() ?? false){
+                ret = _action.Parse(scope);
+                if (scope.Escape.Count <= 0) continue;
+                Escaper esc = scope.Escape.Peek();
+                if(esc.Method == Escape.Break)
+                    scope.Escape.Pop();
+                return esc.Value;
             }
             return ret;
         }
